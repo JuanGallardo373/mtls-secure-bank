@@ -28,17 +28,24 @@ openssl req -new -key certs/server-key.pem -out certs/server.csr \
 
 # 3. Crear archivo de extensiones para SAN (Subject Alternative Names)
 echo "[3/4] Configurando SAN (Subject Alternative Names)..."
-cat > certs/server.ext << EOF
+cat > certs/server.ext << 'EOF'
 subjectAltName = DNS:localhost,DNS:127.0.0.1,IP:127.0.0.1
 extendedKeyUsage = serverAuth,clientAuth
 EOF
 
 # 4. Firmar el certificado con la CA (válido por 1 año)
 echo "[4/4] Firmando certificado con la CA (válido 1 año)..."
-openssl x509 -req -days 365 -in certs/server.csr \
+openssl x509 -req -in certs/server.csr \
   -CA certs/ca-cert.pem -CAkey certs/ca-key.pem \
   -CAcreateserial -out certs/server-cert.pem \
-  -extensions v3_req -extfile certs/server.ext 2>/dev/null
+  -days 365 -extensions v3_req -extfile certs/server.ext
+
+# Verificar que se creó el certificado
+if [ ! -f "certs/server-cert.pem" ]; then
+    echo "❌ Error: No se pudo crear server-cert.pem"
+    echo "   Verifica que ca-key.pem y ca-cert.pem existan"
+    exit 1
+fi
 
 # Limpiar archivos temporales
 rm -f certs/server.csr certs/server.ext
