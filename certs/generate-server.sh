@@ -24,21 +24,16 @@ openssl genrsa -out certs/server-key.pem 2048 2>/dev/null
 # 2. Crear solicitud de firma de certificado (CSR)
 echo "[2/4] Creando solicitud de firma de certificado (CSR)..."
 openssl req -new -key certs/server-key.pem -out certs/server.csr \
-  -subj "/C=AR/ST=Buenos Aires/L=CABA/O=VVBA/OU=Banking/CN=localhost"
+  -subj "/C=AR/ST=Buenos Aires/L=CABA/O=VVBA/OU=Banking/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,DNS:127.0.0.1,IP:127.0.0.1"
 
-# 3. Crear archivo de extensiones para SAN (Subject Alternative Names)
-echo "[3/4] Configurando SAN (Subject Alternative Names)..."
-cat > certs/server.ext << 'EOF'
-subjectAltName = DNS:localhost,DNS:127.0.0.1,IP:127.0.0.1
-extendedKeyUsage = serverAuth,clientAuth
-EOF
-
-# 4. Firmar el certificado con la CA (válido por 1 año)
-echo "[4/4] Firmando certificado con la CA (válido 1 año)..."
+# 3. Firmar el certificado con la CA (válido por 1 año)
+# Usando -copy_extensions copyall para preservar las extensiones del CSR
+echo "[3/4] Firmando certificado con la CA (válido 1 año)..."
 openssl x509 -req -in certs/server.csr \
   -CA certs/ca-cert.pem -CAkey certs/ca-key.pem \
   -CAcreateserial -out certs/server-cert.pem \
-  -days 365 -extensions v3_req -extfile certs/server.ext
+  -days 365 -copy_extensions copyall
 
 # Verificar que se creó el certificado
 if [ ! -f "certs/server-cert.pem" ]; then
@@ -48,13 +43,13 @@ if [ ! -f "certs/server-cert.pem" ]; then
 fi
 
 # Limpiar archivos temporales
-rm -f certs/server.csr certs/server.ext
+rm -f certs/server.csr
 
 echo ""
 echo "✅ Certificado del Servidor generado exitosamente!"
 echo ""
 echo "📋 Información del Certificado:"
-openssl x509 -in certs/server-cert.pem -text -noout | grep -E "Subject:|Issuer:|Not Before|Not After|DNS:|Public-Key"
+openssl x509 -in certs/server-cert.pem -text -noout | grep -E "Subject:|Issuer:|Not Before|Not After|DNS:|Public-Key|Alternative"
 
 echo ""
 echo "📁 Archivos generados:"
